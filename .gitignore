@@ -1,0 +1,13 @@
+# Credentials & Secrets (NEVER COMMIT)
+antigravity-accounts.json
+*.token
+.env
+.env.*
+
+# Dependencies & Build
+node_modules/
+dist/
+
+# Logs & Runtime
+*.log
+.DS_Store
