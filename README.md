@@ -25,38 +25,7 @@ If you tried using community plugins like `opencode-antigravity-auth` or an unpa
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph Clients["OpenCode 2.0 Clients"]
-        CLI["OpenCode CLI (TUI)"]
-        UI["OpenCode Desktop (Electron)"]
-    end
-
-    subgraph Service["OpenCode Background Daemon"]
-        Daemon["opencode-cli serve --service"]
-        DB["opencode.db (SQLite)"]
-        State["model.json / drafts.sqlite"]
-    end
-
-    subgraph Bridge["Open-Gemini Local Proxy Bridge"]
-        Proxy["Bun HTTP Server<br/>http://127.0.0.1:3000/v1"]
-        Transform["Transform & Sanitizer<br/>($ref cleanup + JPEG compression)"]
-        Accounts["antigravity-accounts.json<br/>(OAuth Token & Project)"]
-    end
-
-    subgraph Upstream["Google Cloud Code Backend"]
-        CloudCode["daily-cloudcode-pa.googleapis.com<br/>/v1internal:streamGenerateContent"]
-    end
-
-    CLI --> Daemon
-    UI --> Daemon
-    Daemon --> DB
-    Daemon --> State
-    Daemon -->|OpenAI-compatible HTTP| Proxy
-    Proxy --> Transform
-    Transform --> Accounts
-    Transform -->|Impersonated Protobuf / SSE| CloudCode
-```
+![Open-Gemini Architecture](assets/diagram.png)
 
 ---
 
