@@ -412,9 +412,19 @@ WantedBy=default.target
 function installOpenCodeCommandsAndSkills(projectRoot: string) {
   const commandsSrc = join(projectRoot, "commands");
   const skillsSrc = join(projectRoot, "skills");
+  const pluginsSrc = join(projectRoot, "src", "plugins");
 
   const opencodeCommandsDir = join(HOME, ".config", "opencode", "commands");
   const opencodeSkillsDir = join(HOME, ".config", "opencode", "skills");
+  const opencodePluginsDir = join(HOME, ".config", "opencode", "plugins");
+
+  // Remove legacy/prompt-based agy-usage if present so it doesn't conflict with the native plugin
+  const staleUsagePrompt = join(opencodeCommandsDir, "agy-usage.md");
+  if (existsSync(staleUsagePrompt)) {
+    try {
+      Bun.spawnSync(["rm", "-f", staleUsagePrompt]);
+    } catch {}
+  }
 
   if (existsSync(commandsSrc)) {
     ensureDir(join(opencodeCommandsDir, "placeholder"));
@@ -439,6 +449,18 @@ function installOpenCodeCommandsAndSkills(projectRoot: string) {
         copyFileSync(join(srcSkillDir, "SKILL.md"), join(destSkillDir, "SKILL.md"));
         console.log(`✓ Installed OpenCode skill: ${skill}`);
       }
+    }
+  }
+
+  if (existsSync(pluginsSrc)) {
+    ensureDir(join(opencodePluginsDir, "placeholder"));
+    const pluginFiles = readdirSync(pluginsSrc);
+    for (const file of pluginFiles) {
+      if (!file.endsWith(".ts") && !file.endsWith(".js")) continue;
+      const srcFile = join(pluginsSrc, file);
+      const destFile = join(opencodePluginsDir, file);
+      copyFileSync(srcFile, destFile);
+      console.log(`✓ Installed OpenCode server plugin: ${file}`);
     }
   }
 }
