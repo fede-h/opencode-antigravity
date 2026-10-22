@@ -3,7 +3,7 @@ import { loadProxyConfig, getProxyConfig } from "./config/manager";
 
 await loadProxyConfig();
 
-import { initManager, getBestAccount, updateAccountUsage, addAccount, getAccounts, emitAccountFlash, getEarliestReset, markCooldown, ensureFingerprint, flagAccountChallenge, flagModelUnsupported, getFamilyName } from "./auth/manager";
+import { initManager, getBestAccount, updateAccountUsage, addAccount, getAccounts, emitAccountFlash, getEarliestReset, markCooldown, ensureFingerprint, flagAccountChallenge, flagModelUnsupported, isModelUnsupported, getFamilyName } from "./auth/manager";
 import { type AntigravityAccount } from "./auth/types";
 import { generateAuthUrl, exchangeCode, getUserEmail, getProjectId } from "./auth/oauth";
 import { transformToGoogleBody, createOpenAIStreamTransformer } from "./utils/transform";
@@ -434,6 +434,26 @@ Bun.serve({
                  headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "X-Antigravity-Attempts": attempts.toString() } 
              });
            }
+      }
+
+      const allAccounts = getAccounts();
+      const anyAccountSupportsModel = allAccounts.some(a => !isModelUnsupported(a.email, openaiBody.model) && a.capabilities?.[openaiBody.model] !== false);
+      if (!anyAccountSupportsModel && allAccounts.length > 0) {
+        return new Response(JSON.stringify({ 
+          error: { 
+              message: `Model unavailable: ${openaiBody.model} is not supported or temporarily unavailable on configured accounts.`,
+              type: "invalid_request_error",
+              code: "model_not_found",
+              attempts: attemptLogs
+          } 
+        }), { 
+          status: 404, 
+          headers: { 
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+              "X-Antigravity-Attempts": attempts.toString()
+          } 
+        });
       }
 
       const resetTime = getEarliestReset(useCliPool ? "cli" : "sandbox");

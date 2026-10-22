@@ -10,6 +10,7 @@ let currentStrategy: SelectionStrategy = 'hybrid';
 let lastAccountIndex = -1;
 const clientStickyMap = new Map<string, string>();
 const cooldownMap = new Map<string, number>();
+const unsupportedModelMap = new Map<string, number>();
 
 export const eventBus = new EventEmitter();
 
@@ -45,6 +46,22 @@ export async function initManager() {
   const config = await loadConfig();
   accounts = config.accounts || [];
   currentStrategy = config.strategy || 'hybrid';
+
+  let hasStale = false;
+  for (const acc of accounts) {
+    if (acc.capabilities) {
+      for (const [key, val] of Object.entries(acc.capabilities)) {
+        if (val === false) {
+          delete acc.capabilities[key];
+          hasStale = true;
+        }
+      }
+    }
+  }
+  if (hasStale) {
+    await saveAccounts(accounts);
+  }
+
   console.log(`[Manager] Loaded ${accounts.length} accounts from storage.`);
 }
 
@@ -106,9 +123,11 @@ export function clearCooldown(email: string, pool: string, modelFamily: string) 
 
 export function resetAllCooldowns() {
   cooldownMap.clear();
+  unsupportedModelMap.clear();
   for (const account of accounts) {
     account.cooldowns = {};
     account.consecutiveFailures = 0;
+    account.capabilities = {};
   }
   saveAccounts(accounts);
 }
@@ -173,7 +192,7 @@ export async function getBestAccount(pool?: 'cli' | 'sandbox', model?: string, c
   
   if (pool) {
     let candidates = usable.filter(a => {
-      if (model && a.capabilities?.[model] === false) return false;
+      if (model && (isModelUnsupported(a.email, model) || a.capabilities?.[model] === false)) return false;
       if (isAccountQuotaExhausted(a, model)) return false;
       const expiry = cooldownMap.get(`${a.email}|${pool}|${family}`);
       return !expiry || expiry <= now;
@@ -203,7 +222,7 @@ export async function getBestAccount(pool?: 'cli' | 'sandbox', model?: string, c
     }
 
     if (candidates.length === 0 && !skipRescue) {
-      candidates = usable.filter(a => !(model && a.capabilities?.[model] === false))
+      candidates = usable.filter(a => !(model && (isModelUnsupported(a.email, model) || a.capabilities?.[model] === false)))
         .filter(a => {
           const expiry = cooldownMap.get(`${a.email}|${pool}|${family}`);
           return !expiry || expiry <= now + 300000;
@@ -311,13 +330,20 @@ export function parseDuration(val: string): number {
   return amount * multipliers[match[2]];
 }
 
-export function flagModelUnsupported(email: string, model: string) {
-    const account = accounts.find(a => a.email === email);
-    if (account) {
-        if (!account.capabilities) account.capabilities = {};
-        account.capabilities[model] = false;
-        saveAccounts(accounts);
-    }
+export function flagModelUnsupported(email: string, model: string, ttlMs: number = 15 * 60 * 1000) {
+  const expiry = Date.now() + ttlMs;
+  unsupportedModelMap.set(`${email}|${model}`, expiry);
+  console.log(`[Manager] Model ${model} temporarily flagged unsupported for ${email} (TTL: ${Math.round(ttlMs / 60000)}m)`);
+}
+
+export function isModelUnsupported(email: string, model: string): boolean {
+  const expiry = unsupportedModelMap.get(`${email}|${model}`);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    unsupportedModelMap.delete(`${email}|${model}`);
+    return false;
+  }
+  return true;
 }
 
 export async function resetAccount(email: string) {
@@ -328,12 +354,16 @@ export async function resetAccount(email: string) {
         account.cooldowns = {};
         account.modelScores = {};
         account.history = [];
+        account.capabilities = {};
         delete account.challenge;
         const keysToDelete = [];
         for (const [key] of cooldownMap) {
             if (key.startsWith(email + "|")) keysToDelete.push(key);
         }
         for (const key of keysToDelete) cooldownMap.delete(key);
+        for (const [key] of unsupportedModelMap) {
+            if (key.startsWith(email + "|")) unsupportedModelMap.delete(key);
+        }
         await saveAccounts(accounts);
     }
 }
