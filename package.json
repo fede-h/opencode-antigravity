@@ -1,7 +1,7 @@
 {
   "name": "open-gemini",
   "version": "1.0.0",
-  "description": "Local OpenAI-compatible proxy bridge and automated installer to route Google Antigravity models (Gemini 3.8 Flash, Gemini 4 Argon, Claude 4.6 Thinking) to OpenCode CLI and Desktop.",
+  "description": "Local OpenAI-compatible proxy bridge and automated installer to route Google Antigravity models (Gemini 3.8 Flash, Gemini 4 Argon, Claude 5.5 Thinking, GPT-OSS 120B) to OpenCode CLI and Desktop.",
   "module": "src/server.ts",
   "bin": {
     "open-gemini": "./src/server.ts",

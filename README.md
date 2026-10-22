@@ -63,17 +63,13 @@ bun run setup
 
 ## Included Models
 
-| OpenCode Model ID | Display Name | Upstream Target | Context / Output |
-| :--- | :--- | :--- | :--- |
-| `antigravity/antigravity-gemini-3.8-flash` | `Gemini 3.8 Flash` | `gemini-3.8-flash-tiered` | 1,048,576 / 65,536 |
-| `antigravity/antigravity-gemini-4-argon` | `Gemini 4 Argon` | `gemini-3.8-flash-tiered` (High Thinking, 32k budget) | 1,048,576 / 65,536 |
-| `antigravity/antigravity-gemini-3.1-pro-high` | `Gemini 3.1 Pro (High Thinking)` | `gemini-3.1-pro-high` | 1,048,576 / 65,535 |
-| `antigravity/antigravity-gemini-3.1-pro-low` | `Gemini 3.1 Pro (Low Thinking)` | `gemini-3.1-pro-low` | 1,048,576 / 65,535 |
-| `antigravity/antigravity-gemini-3-flash` | `Gemini 3 Flash` | `gemini-3-flash` | 1,048,576 / 65,536 |
-| `antigravity/antigravity-claude-opus-4-6-thinking-high` | `Claude Opus 4.6 Thinking (High)` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
-| `antigravity/antigravity-claude-opus-4-6-thinking-low` | `Claude Opus 4.6 Thinking (Low)` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
-| `antigravity/antigravity-claude-sonnet-4-6-thinking-high` | `Claude Sonnet 4.6 Thinking (High)` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
-| `antigravity/antigravity-claude-sonnet-4-6-thinking-low` | `Claude Sonnet 4.6 Thinking (Low)` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
+| OpenCode Model ID | Display Name | Upstream Target | Variants | Context / Output |
+| :--- | :--- | :--- | :--- | :--- |
+| `antigravity/antigravity-gemini-3.8-flash` | `Gemini 3.8 Flash` | `gemini-3.8-flash-tiered` | — | 1,048,576 / 65,536 |
+| `antigravity/antigravity-gemini-4-argon` | `Gemini 4 Argon` | `gemini-3.8-flash-tiered` (32k budget) | — | 1,048,576 / 65,536 |
+| `antigravity/antigravity-claude-opus-5-5` | `Claude Opus 5.5` | `claude-opus-5-5-(low\|medium\|high)` | `#low`, `#medium`, `#high` | 1,000,000 / 64,000 |
+| `antigravity/antigravity-claude-sonnet-5-5` | `Claude Sonnet 5.5` | `claude-sonnet-5-5-(low\|medium\|high)` | `#low`, `#medium`, `#high` | 1,000,000 / 64,000 |
+| `antigravity/antigravity-gpt-oss-120b-medium` | `GPT-OSS 120B (Medium)` | `gpt-oss-120b-medium` | — | 131,072 / 16,384 |
 
 ---
 
@@ -83,8 +79,20 @@ bun run setup
 # Test Gemini 3.8 Flash
 opencode run -m antigravity/antigravity-gemini-3.8-flash "Say hello"
 
-# Test Gemini 4 Argon
+# Test Gemini 4 Argon (3.8 Flash with 32k thinking budget)
 opencode run -m antigravity/antigravity-gemini-4-argon "Say hello"
+
+# Test Claude Opus 5.5 (default medium reasoning)
+opencode run -m antigravity/antigravity-claude-opus-5-5 "Say hello"
+
+# Test Claude Opus 5.5 with high reasoning effort
+opencode run -m antigravity/antigravity-claude-opus-5-5#high "Say hello"
+
+# Test Claude Sonnet 5.5
+opencode run -m antigravity/antigravity-claude-sonnet-5-5 "Say hello"
+
+# Test GPT-OSS 120B
+opencode run -m antigravity/antigravity-gpt-oss-120b-medium "Say hello"
 
 # Check service logs (Linux)
 journalctl --user -u antigravity-proxy.service -f
