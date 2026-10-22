@@ -317,7 +317,7 @@ Bun.serve({
 
                  const stream = googleRes.body.pipeThrough(createOpenAIStreamTransformer(openaiBody.model, requestId, false, sessionId));
 
-                 await updateAccountUsage(account.email, true, openaiBody.model, useCliPool ? "cli" : "sandbox", clientId);
+                 void updateAccountUsage(account.email, true, openaiBody.model, useCliPool ? "cli" : "sandbox", clientId).catch(console.error);
                  return new Response(stream, {
                   headers: {
                     "Content-Type": "text/event-stream",
@@ -403,7 +403,7 @@ Bun.serve({
                     continue;
                 }
 
-                await updateAccountUsage(account.email, true, openaiBody.model, useCliPool ? "cli" : "sandbox", clientId);
+                void updateAccountUsage(account.email, true, openaiBody.model, useCliPool ? "cli" : "sandbox", clientId).catch(console.error);
                return new Response(JSON.stringify(finalResponse), { 
                    headers: { 
                        "Content-Type": "application/json", 
