@@ -463,6 +463,21 @@ function installOpenCodeCommandsAndSkills(projectRoot: string) {
       console.log(`✓ Installed OpenCode server plugin: ${file}`);
     }
   }
+
+  // Symlink standalone CLI utilities to ~/.local/bin if it exists
+  const localBin = join(HOME, ".local", "bin");
+  if (existsSync(localBin)) {
+    try {
+      const showQuotaScript = join(projectRoot, "src", "scripts", "show-quota.ts");
+      chmodSync(showQuotaScript, 0o755);
+      const targetSymlink = join(localBin, "agy-usage");
+      if (existsSync(targetSymlink)) {
+        Bun.spawnSync(["rm", "-f", targetSymlink]);
+      }
+      Bun.spawnSync(["ln", "-sf", showQuotaScript, targetSymlink]);
+      console.log(`✓ Linked executable to ${targetSymlink}`);
+    } catch {}
+  }
 }
 
 async function main() {
