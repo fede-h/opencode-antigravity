@@ -62,15 +62,19 @@ export function getOriginalToolName(sanitizedName: string): string | undefined {
 }
 
 const CLAUDE_MODEL_REGISTRY = [
+    "claude-opus-5-5-thinking",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5-thinking",
+    "claude-sonnet-5-5",
+    "claude-opus-4-6-thinking",
+    "claude-sonnet-4-6",
+    "claude-sonnet-4-6-thinking",
     "claude-3-7-sonnet-20250219",
     "claude-3-5-sonnet-20241022",
     "claude-3-5-sonnet-v2-20241022",
     "claude-3-5-sonnet-20240620",
     "claude-3-5-haiku-20241022",
     "claude-3-opus-20240229",
-    "claude-opus-4-6-thinking",
-    "claude-sonnet-4-6",
-    "claude-sonnet-4-6-thinking",
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307"
 ];
@@ -94,6 +98,10 @@ function resolveModelId(modelId: string): string {
             fuzzyMatches.sort((a, b) => b.localeCompare(a));
             return fuzzyMatches[0];
         }
+    }
+
+    if (cleanId.includes("gpt-oss-120b")) {
+        return "gpt-oss-120b-medium";
     }
 
     if (cleanId.includes("gemini-4-argon") || cleanId.includes("argon")) {
@@ -127,10 +135,12 @@ export function transformToGoogleBody(
   const extractedTier = thinkingTierMatch ? thinkingTierMatch[1] : (tierMatch ? tierMatch[1] : undefined);
   
   let baseModel = googleModel;
-  if (thinkingTierMatch) {
-      baseModel = googleModel.replace(thinkingTierMatch[0], "");
-  } else if (tierMatch) {
-      baseModel = googleModel.replace(tierMatch[0], "");
+  if (!googleModel.startsWith("gpt-oss")) {
+    if (thinkingTierMatch) {
+        baseModel = googleModel.replace(thinkingTierMatch[0], "");
+    } else if (tierMatch) {
+        baseModel = googleModel.replace(tierMatch[0], "");
+    }
   }
   
   const previewMatch = baseModel.match(/-preview$/i);
@@ -141,12 +151,19 @@ export function transformToGoogleBody(
   // Force Claude model IDs to strip tier for the backend
         if (googleModel.includes("claude")) {
             googleModel = baseModel;
+            if (rawModel.includes("-thinking") && !googleModel.includes("-thinking")) {
+                googleModel = `${googleModel}-thinking`;
+            }
             if (googleModel === "claude-opus-4-6") googleModel = "claude-opus-4-6-thinking";
             if (googleModel === "claude-sonnet-4-6") googleModel = "claude-sonnet-4-6-thinking";
             if (googleModel === "claude-sonnet-4-5") googleModel = "claude-sonnet-4-5-thinking";
         }
 
     const nativelySupported = [
+      "claude-opus-5-5",
+      "claude-opus-5-5-thinking",
+      "claude-sonnet-5-5",
+      "claude-sonnet-5-5-thinking",
       "claude-sonnet-4-6",
       "claude-sonnet-4-6-thinking",
       "claude-sonnet-4-5", 
@@ -197,6 +214,9 @@ export function transformToGoogleBody(
           }
        } else {
            googleModel = baseModel;
+           if (rawModel.includes("-thinking") && !googleModel.includes("-thinking")) {
+               googleModel = `${googleModel}-thinking`;
+           }
            if (googleModel === "claude-sonnet-4-6") googleModel = "claude-sonnet-4-6-thinking";
            if (googleModel === "claude-sonnet-4-5") googleModel = "claude-sonnet-4-5-thinking";
        }
@@ -217,7 +237,11 @@ export function transformToGoogleBody(
                googleModel = baseModel;
            }
 
-             if (googleModel === "claude-opus-4-6" || googleModel === "antigravity-claude-opus-4-6") {
+           if (googleModel.includes("claude") && rawModel.includes("-thinking") && !googleModel.includes("-thinking")) {
+               googleModel = `${googleModel}-thinking`;
+           }
+
+           if (googleModel === "claude-opus-4-6" || googleModel === "antigravity-claude-opus-4-6") {
                  googleModel = "claude-opus-4-6-thinking";
              }
            if (googleModel === "claude-sonnet-4-6" || googleModel === "antigravity-claude-sonnet-4-6") {

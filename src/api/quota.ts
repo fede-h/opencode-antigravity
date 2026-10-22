@@ -62,7 +62,14 @@ function getNextMidnightPT(): string {
 
 export const supportedModelsCache: Set<string> = new Set([
     "antigravity-gemini-4-argon",
-    "antigravity-gemini-3.8-flash"
+    "antigravity-gemini-3.8-flash",
+    "antigravity-claude-opus-5-5-thinking-high",
+    "antigravity-claude-opus-5-5-thinking-low",
+    "antigravity-claude-opus-5-5",
+    "antigravity-claude-sonnet-5-5-thinking-high",
+    "antigravity-claude-sonnet-5-5-thinking-low",
+    "antigravity-claude-sonnet-5-5",
+    "antigravity-gpt-oss-120b-medium"
 ]);
 
 function parseQuotaResponse(data: any): AntigravityAccount['quota'] | null {

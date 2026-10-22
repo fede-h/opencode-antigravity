@@ -101,6 +101,48 @@ describe("Unit Tests: transformToGoogleBody", () => {
     expect(result.request.generationConfig.thinkingConfig.thinkingBudget).toBe(32768);
   });
 
+  test("Claude Opus 5.5 and Sonnet 5.5 mapping and budget", () => {
+    const opusHigh = transformToGoogleBody({
+      model: "antigravity-claude-opus-5-5-thinking-high",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(opusHigh.model).toBe("claude-opus-5-5-thinking");
+    expect(opusHigh.request.generationConfig.thinkingConfig.thinkingBudget).toBe(32768);
+
+    const opusLow = transformToGoogleBody({
+      model: "antigravity-claude-opus-5-5-thinking-low",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(opusLow.model).toBe("claude-opus-5-5-thinking");
+    expect(opusLow.request.generationConfig.thinkingConfig.thinkingBudget).toBe(8192);
+
+    const opusNonThinking = transformToGoogleBody({
+      model: "antigravity-claude-opus-5-5",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(opusNonThinking.model).toBe("claude-opus-5-5");
+
+    const sonnetHigh = transformToGoogleBody({
+      model: "antigravity-claude-sonnet-5-5-thinking-high",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(sonnetHigh.model).toBe("claude-sonnet-5-5-thinking");
+
+    const sonnetNonThinking = transformToGoogleBody({
+      model: "antigravity-claude-sonnet-5-5",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(sonnetNonThinking.model).toBe("claude-sonnet-5-5");
+  });
+
+  test("GPT-OSS 120B mapping", () => {
+    const gptOss = transformToGoogleBody({
+      model: "antigravity-gpt-oss-120b-medium",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(gptOss.model).toBe("gpt-oss-120b-medium");
+  });
+
   test("Claude Opus 4.6 Thinking Low budget", () => {
     const openaiBody = {
       model: "antigravity-claude-opus-4-6-thinking-low",
