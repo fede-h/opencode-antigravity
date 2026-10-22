@@ -72,7 +72,7 @@ export const supportedModelsCache: Set<string> = new Set([
     "antigravity-gpt-oss-120b-medium"
 ]);
 
-function parseQuotaResponse(data: any): AntigravityAccount['quota'] | null {
+export function parseQuotaResponse(data: any): AntigravityAccount['quota'] | null {
     // Handle both array and map formats
     let rawModels = data.availableModels || data.models || [];
     let entries: [string, any][] = [];
@@ -94,12 +94,14 @@ function parseQuotaResponse(data: any): AntigravityAccount['quota'] | null {
         if (label === "Unknown" || lowerLabel === "unknown") continue;
 
         // Cache supported model ID/Name
-        const modelId = key.replace("models/", "");
+        const modelId = key.replace(/^models\//, "");
         // If the key is a valid ID without spaces, cache it. Otherwise cache label.
-        if (modelId && modelId !== "Unknown" && !modelId.includes(" ")) {
-            supportedModelsCache.add(modelId);
-        } else if (label !== "Unknown") {
-            supportedModelsCache.add(label);
+        const idToCache = (modelId && modelId !== "Unknown" && !modelId.includes(" ")) ? modelId : (label !== "Unknown" ? label : null);
+        if (idToCache) {
+            supportedModelsCache.add(idToCache);
+            if (!idToCache.startsWith("antigravity-")) {
+                supportedModelsCache.add(`antigravity-${idToCache}`);
+            }
         }
 
         const allowedPatterns = [

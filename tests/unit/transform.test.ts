@@ -213,6 +213,14 @@ describe("Unit Tests: transformToGoogleBody", () => {
     expect(argonRes.request.generationConfig.thinkingConfig.thinkingLevel).toBe("high");
     expect(argonRes.request.generationConfig.thinkingConfig.thinkingBudget).toBe(32768);
   });
+
+  test("Newly discovered model passes through cleanly", () => {
+    const res = transformToGoogleBody({
+      model: "antigravity-future-model-x",
+      messages: [{ role: "user", content: "Hi" }]
+    }, "p", false, "us-central1");
+    expect(res.model).toBe("future-model-x");
+  });
 });
 
 describe("Unit Tests: transformGoogleEventToOpenAI", () => {

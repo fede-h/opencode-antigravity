@@ -16,7 +16,8 @@ await initManager();
 const proxyConfig = getProxyConfig();
 
 // Initial quota refresh on startup
-refreshAllQuotas();
+let lastQuotaRefresh = 0;
+refreshAllQuotas().then(() => { lastQuotaRefresh = Date.now(); });
 
 Bun.serve({
   port: 3000,
@@ -42,6 +43,12 @@ Bun.serve({
     }
 
     if (cleanPath === "/v1/models") {
+        // Refresh quotas if empty, defaults only, or stale (>10 min)
+        if (supportedModelsCache.size <= 9 || Date.now() - lastQuotaRefresh > 10 * 60 * 1000) {
+            await refreshAllQuotas();
+            lastQuotaRefresh = Date.now();
+        }
+
         const models = Array.from(supportedModelsCache).sort().map(id => ({
             id,
             object: "model",

@@ -193,7 +193,7 @@ export function transformToGoogleBody(
       "gemini-3-flash-preview"
   ];
   
-  const isNative = (nativelySupported.includes(googleModel) || nativelySupported.includes(baseModel));
+  const isNative = (nativelySupported.includes(googleModel) || nativelySupported.includes(baseModel) || !googleModel.includes("claude"));
 
   if (isCli) {
       if (!googleModel.includes("claude")) {
