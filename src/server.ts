@@ -15,7 +15,6 @@ await initManager();
 
 const proxyConfig = getProxyConfig();
 
-setInterval(refreshAllQuotas, proxyConfig.quota.refreshIntervalMs);
 // Initial quota refresh on startup
 refreshAllQuotas();
 
