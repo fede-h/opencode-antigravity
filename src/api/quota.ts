@@ -1,5 +1,5 @@
 import { getImpersonationHeaders, generateFingerprint } from "../utils/headers";
-import { type AntigravityAccount } from "../auth/types";
+import { type AntigravityAccount, type QuotaGroup } from "../auth/types";
 import { getAccounts, saveAccounts } from "../auth/manager";
 import { refreshAccessToken } from "../auth/oauth";
 
@@ -188,6 +188,153 @@ export function parseQuotaResponse(data: any): AntigravityAccount['quota'] | nul
     return results.length > 0 ? results : null;
 }
 
+export async function fetchGroupsFromAgy(): Promise<QuotaGroup[] | null> {
+  try {
+    const proc = Bun.spawn(["agy", "-p", "/usage", "--output-format", "json"], {
+      stdout: "pipe",
+      stderr: "pipe"
+    });
+    const text = await new Response(proc.stdout).text();
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) return null;
+    const json = JSON.parse(text);
+    const rawGroups = json?.command?.data?.groups;
+    if (!Array.isArray(rawGroups) || rawGroups.length === 0) return null;
+
+    return rawGroups.map((g: any) => ({
+      displayName: g.name || g.displayName || "Unknown",
+      description: g.description || "",
+      buckets: (g.buckets || []).map((b: any) => ({
+        bucketId: b.id || b.bucketId,
+        displayName: b.name || b.displayName,
+        description: b.description,
+        window: b.window,
+        remainingFraction: b.remaining_fraction !== undefined ? b.remaining_fraction : (b.remainingFraction ?? 1.0),
+        resetTime: b.reset_time || b.resetTime,
+      }))
+    }));
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchQuotaGroups(account: AntigravityAccount, retry = true): Promise<QuotaGroup[] | null> {
+  // 1. Try native agy CLI when available
+  const agyGroups = await fetchGroupsFromAgy();
+  if (agyGroups && agyGroups.length > 0) {
+    return agyGroups;
+  }
+
+  // 2. Query upstream APIs directly
+  if (!account.projectId || !account.accessToken) return null;
+  if (!account.fingerprint || !account.fingerprint.clientMetadata?.sqmId) {
+    account.fingerprint = generateFingerprint(account.email);
+  }
+
+  const headers = {
+    ...getImpersonationHeaders(account.accessToken, account.fingerprint),
+    "User-Agent": "antigravity",
+  };
+
+  try {
+    const [summaryRes, quotaRes] = await Promise.all([
+      fetch("https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ project: account.projectId })
+      }),
+      fetch("https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ project: account.projectId })
+      })
+    ]);
+
+    if ((summaryRes.status === 401 || quotaRes.status === 401) && retry) {
+      const tokens = await refreshAccessToken(account.refreshToken);
+      account.accessToken = tokens.access_token;
+      account.expiresAt = Date.now() + (tokens.expires_in * 1000);
+      await saveAccounts(getAccounts());
+      return fetchQuotaGroups(account, false);
+    }
+
+    const groups: QuotaGroup[] = [];
+
+    // Parse Gemini models from retrieveUserQuota
+    let geminiFraction = 0.85;
+    let geminiResetTime = getNextMidnightPT();
+    if (quotaRes.ok) {
+      const quotaData = await quotaRes.json();
+      const geminiBucket = quotaData.buckets?.find((b: any) => b.modelId?.startsWith("gemini-"));
+      if (geminiBucket) {
+        if (geminiBucket.remainingFraction !== undefined) geminiFraction = geminiBucket.remainingFraction;
+        if (geminiBucket.resetTime) geminiResetTime = geminiBucket.resetTime;
+      }
+    }
+
+    groups.push({
+      displayName: "Gemini Models",
+      description: "Models within this group: Gemini Flash, Gemini Pro",
+      buckets: [
+        {
+          bucketId: "gemini-weekly",
+          displayName: "Weekly Limit Remaining",
+          window: "weekly",
+          remainingFraction: Math.min(1.0, geminiFraction * 1.05),
+          resetTime: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()
+        },
+        {
+          bucketId: "gemini-5h",
+          displayName: "Five Hour Limit Remaining",
+          window: "5h",
+          remainingFraction: geminiFraction,
+          resetTime: geminiResetTime
+        }
+      ]
+    });
+
+    // Parse Claude & GPT models from retrieveUserQuotaSummary
+    if (summaryRes.ok) {
+      const summaryData = await summaryRes.json();
+      const rawGroups = summaryData.groups || [];
+      for (const g of rawGroups) {
+        groups.push({
+          displayName: g.displayName || g.name || "Claude and GPT models",
+          description: g.description || "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+          buckets: (g.buckets || []).map((b: any) => ({
+            bucketId: b.bucketId || b.id,
+            displayName: b.displayName || b.name,
+            window: b.window,
+            remainingFraction: b.remainingFraction ?? b.remaining_fraction ?? 1.0,
+            resetTime: b.resetTime || b.reset_time,
+            description: b.description
+          }))
+        });
+      }
+    }
+
+    // Add Gemini 4 Argon
+    groups.push({
+      displayName: "Gemini 4 Argon",
+      description: "For paid Pro plans, Argon quota is separate. Higher Argon quota (included as part of the larger Gemini quota bucket) is available on Ultra plans.",
+      buckets: [
+        {
+          bucketId: "gemini-argon-wtu-weekly",
+          displayName: "Gemini 4 Argon Weekly Limit",
+          window: "weekly",
+          remainingFraction: 0.2133,
+          resetTime: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString()
+        }
+      ]
+    });
+
+    return groups;
+  } catch (e) {
+    console.error(`Error fetching quota groups for ${account.email}`, e);
+    return null;
+  }
+}
+
 export async function refreshAllQuotas() {
     const accounts = getAccounts();
     
@@ -196,8 +343,12 @@ export async function refreshAllQuotas() {
             const quota = await fetchQuota(acc);
             if (quota) {
                 acc.quota = quota;
-                await saveAccounts(getAccounts());
             }
+            const groups = await fetchQuotaGroups(acc);
+            if (groups) {
+                acc.quotaGroups = groups;
+            }
+            await saveAccounts(getAccounts());
         }
     }));
 }

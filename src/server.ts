@@ -53,6 +53,7 @@ Bun.serve({
             projectId: a.projectId,
             healthScore: a.healthScore ?? 100,
             quota: a.quota || [],
+            quotaGroups: a.quotaGroups || [],
             lastUsed: a.lastUsed ? new Date(a.lastUsed).toISOString() : null
         }));
 

@@ -22,6 +22,27 @@ export interface DeviceFingerprint {
   createdAt?: number;
 }
 
+export interface QuotaBucket {
+  bucketId?: string;
+  id?: string;
+  displayName?: string;
+  name?: string;
+  window?: string;
+  remainingFraction: number;
+  remaining_fraction?: number;
+  resetTime?: string;
+  reset_time?: string;
+  resetIn?: string;
+  description?: string;
+}
+
+export interface QuotaGroup {
+  displayName?: string;
+  name?: string;
+  description: string;
+  buckets: QuotaBucket[];
+}
+
 export interface AntigravityAccount {
   email: string;
   refreshToken: string;
@@ -61,7 +82,8 @@ export interface AntigravityAccount {
     quotaLeft: string; // e.g., "80%"
     resetIn: string; // e.g., "14h 20m"
     resetTime?: string; // ISO date
-  }>
+  }>;
+  quotaGroups?: QuotaGroup[];
 }
 
 export interface GoogleTokenResponse {
