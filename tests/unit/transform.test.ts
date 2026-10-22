@@ -103,36 +103,39 @@ describe("Unit Tests: transformToGoogleBody", () => {
 
   test("Claude Opus 5.5 and Sonnet 5.5 mapping and budget", () => {
     const opusHigh = transformToGoogleBody({
-      model: "antigravity-claude-opus-5-5-thinking-high",
+      model: "antigravity-claude-opus-5-5",
+      reasoning_effort: "high",
       messages: [{ role: "user", content: "Hi" }]
     }, "p", false, "us-central1");
-    expect(opusHigh.model).toBe("claude-opus-5-5-thinking");
+    expect(opusHigh.model).toBe("claude-opus-5-5-high");
     expect(opusHigh.request.generationConfig.thinkingConfig.thinkingBudget).toBe(32768);
 
     const opusLow = transformToGoogleBody({
-      model: "antigravity-claude-opus-5-5-thinking-low",
+      model: "antigravity-claude-opus-5-5",
+      reasoning_effort: "low",
       messages: [{ role: "user", content: "Hi" }]
     }, "p", false, "us-central1");
-    expect(opusLow.model).toBe("claude-opus-5-5-thinking");
+    expect(opusLow.model).toBe("claude-opus-5-5-low");
     expect(opusLow.request.generationConfig.thinkingConfig.thinkingBudget).toBe(8192);
 
-    const opusNonThinking = transformToGoogleBody({
+    const opusDefault = transformToGoogleBody({
       model: "antigravity-claude-opus-5-5",
       messages: [{ role: "user", content: "Hi" }]
     }, "p", false, "us-central1");
-    expect(opusNonThinking.model).toBe("claude-opus-5-5");
+    expect(opusDefault.model).toBe("claude-opus-5-5-medium");
 
     const sonnetHigh = transformToGoogleBody({
-      model: "antigravity-claude-sonnet-5-5-thinking-high",
+      model: "antigravity-claude-sonnet-5-5",
+      reasoning_effort: "high",
       messages: [{ role: "user", content: "Hi" }]
     }, "p", false, "us-central1");
-    expect(sonnetHigh.model).toBe("claude-sonnet-5-5-thinking");
+    expect(sonnetHigh.model).toBe("claude-sonnet-5-5-high");
 
-    const sonnetNonThinking = transformToGoogleBody({
+    const sonnetDefault = transformToGoogleBody({
       model: "antigravity-claude-sonnet-5-5",
       messages: [{ role: "user", content: "Hi" }]
     }, "p", false, "us-central1");
-    expect(sonnetNonThinking.model).toBe("claude-sonnet-5-5");
+    expect(sonnetDefault.model).toBe("claude-sonnet-5-5-medium");
   });
 
   test("GPT-OSS 120B mapping", () => {

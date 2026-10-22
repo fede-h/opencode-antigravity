@@ -11,7 +11,12 @@ const HOME = homedir();
 const OS = platform();
 const PROXY_URL = process.env.PROXY_URL || "http://127.0.0.1:3000/v1";
 
-const ANTIGRAVITY_MODELS: Record<string, { name: string; limit: { context: number; output: number }; defaultVariant?: string }> = {
+const ANTIGRAVITY_MODELS: Record<string, {
+  name: string;
+  limit: { context: number; output: number };
+  defaultVariant?: string;
+  variants?: Record<string, Record<string, any>>;
+}> = {
   "antigravity-gemini-4-argon": {
     name: "Gemini 4 Argon",
     limit: { context: 1048576, output: 65536 },
@@ -22,35 +27,25 @@ const ANTIGRAVITY_MODELS: Record<string, { name: string; limit: { context: numbe
     limit: { context: 1048576, output: 65536 },
     defaultVariant: "high"
   },
-  "antigravity-claude-opus-5-5-thinking-high": {
-    name: "Claude Opus 5.5 (Thinking High)",
-    limit: { context: 1000000, output: 64000 },
-    defaultVariant: "high"
-  },
-  "antigravity-claude-opus-5-5-thinking-low": {
-    name: "Claude Opus 5.5 (Thinking Low)",
-    limit: { context: 1000000, output: 64000 },
-    defaultVariant: "default"
-  },
   "antigravity-claude-opus-5-5": {
     name: "Claude Opus 5.5",
     limit: { context: 1000000, output: 64000 },
-    defaultVariant: "default"
-  },
-  "antigravity-claude-sonnet-5-5-thinking-high": {
-    name: "Claude Sonnet 5.5 (Thinking High)",
-    limit: { context: 1000000, output: 64000 },
-    defaultVariant: "high"
-  },
-  "antigravity-claude-sonnet-5-5-thinking-low": {
-    name: "Claude Sonnet 5.5 (Thinking Low)",
-    limit: { context: 1000000, output: 64000 },
-    defaultVariant: "default"
+    defaultVariant: "medium",
+    variants: {
+      low: { reasoningEffort: "low" },
+      medium: { reasoningEffort: "medium" },
+      high: { reasoningEffort: "high" }
+    }
   },
   "antigravity-claude-sonnet-5-5": {
     name: "Claude Sonnet 5.5",
     limit: { context: 1000000, output: 64000 },
-    defaultVariant: "default"
+    defaultVariant: "medium",
+    variants: {
+      low: { reasoningEffort: "low" },
+      medium: { reasoningEffort: "medium" },
+      high: { reasoningEffort: "high" }
+    }
   },
   "antigravity-gpt-oss-120b-medium": {
     name: "GPT-OSS 120B (Medium)",
@@ -186,7 +181,8 @@ function configureOpenCodeJson() {
   for (const [id, meta] of Object.entries(ANTIGRAVITY_MODELS)) {
     modelsConfig[id] = {
       name: meta.name,
-      limit: meta.limit
+      limit: meta.limit,
+      ...(meta.variants ? { variants: meta.variants } : {})
     };
   }
 
@@ -197,7 +193,6 @@ function configureOpenCodeJson() {
       baseURL: PROXY_URL
     },
     models: {
-      ...(config.provider.antigravity?.models || {}),
       ...modelsConfig
     }
   };
@@ -236,8 +231,8 @@ function configureCliModelSelector() {
   const priorityModels = [
     "antigravity-gemini-4-argon",
     "antigravity-gemini-3.8-flash",
-    "antigravity-claude-opus-5-5-thinking-high",
-    "antigravity-claude-sonnet-5-5-thinking-high",
+    "antigravity-claude-opus-5-5",
+    "antigravity-claude-sonnet-5-5",
     "antigravity-gpt-oss-120b-medium"
   ];
 

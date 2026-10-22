@@ -148,16 +148,21 @@ export function transformToGoogleBody(
       baseModel = baseModel.replace(previewMatch[0], "");
   }
 
-  // Force Claude model IDs to strip tier for the backend
-        if (googleModel.includes("claude")) {
-            googleModel = baseModel;
-            if (rawModel.includes("-thinking") && !googleModel.includes("-thinking")) {
-                googleModel = `${googleModel}-thinking`;
-            }
-            if (googleModel === "claude-opus-4-6") googleModel = "claude-opus-4-6-thinking";
-            if (googleModel === "claude-sonnet-4-6") googleModel = "claude-sonnet-4-6-thinking";
-            if (googleModel === "claude-sonnet-4-5") googleModel = "claude-sonnet-4-5-thinking";
-        }
+  // Force Claude model IDs: 5.5 requires tier suffix for upstream endpoint
+  if (googleModel.includes("claude")) {
+    if (googleModel.includes("5-5")) {
+      const tier = extractedTier || openaiBody.reasoning_effort || openaiBody.providerOptions?.tier || openaiBody.providerOptions?.effort || "medium";
+      googleModel = `${baseModel}-${tier}`;
+    } else {
+      googleModel = baseModel;
+      if (rawModel.includes("-thinking") && !googleModel.includes("-thinking")) {
+        googleModel = `${googleModel}-thinking`;
+      }
+      if (googleModel === "claude-opus-4-6") googleModel = "claude-opus-4-6-thinking";
+      if (googleModel === "claude-sonnet-4-6") googleModel = "claude-sonnet-4-6-thinking";
+      if (googleModel === "claude-sonnet-4-5") googleModel = "claude-sonnet-4-5-thinking";
+    }
+  }
 
     const nativelySupported = [
       "claude-opus-5-5",
@@ -233,6 +238,8 @@ export function transformToGoogleBody(
                googleModel = `gemini-3-pro-${extractedTier || "high"}`;
            } else if (baseModel.includes("gemini-3-flash")) {
                googleModel = "gemini-3-flash";
+           } else if (googleModel.includes("claude-opus-5-5") || googleModel.includes("claude-sonnet-5-5")) {
+               // Keep the 5.5 tier resolved earlier
            } else {
                googleModel = baseModel;
            }
@@ -423,7 +430,7 @@ function sanitizeToolResponseObject(obj: any): any {
     };
   });
 
-  const isThinkingModel = rawModel.includes("-thinking") || rawModel.includes("argon");
+  const isThinkingModel = rawModel.includes("-thinking") || rawModel.includes("argon") || googleModel.includes("5-5");
   const hasExplicitBudget = openaiBody.thinking_budget !== undefined || 
                            openaiBody.thinking?.budget_tokens !== undefined ||
                            openaiBody.providerOptions?.thinkingBudget !== undefined;
@@ -441,9 +448,10 @@ function sanitizeToolResponseObject(obj: any): any {
   }
 
   if (!thinkingBudget && isThinkingModel) {
-      if (extractedTier === "low") thinkingBudget = 8192;
-      else if (extractedTier === "medium") thinkingBudget = 16000;
-      else if (extractedTier === "high") thinkingBudget = 32768;
+      const tier = extractedTier || openaiBody.reasoning_effort || openaiBody.providerOptions?.tier || openaiBody.providerOptions?.effort;
+      if (tier === "low") thinkingBudget = 8192;
+      else if (tier === "medium") thinkingBudget = 16000;
+      else if (tier === "high") thinkingBudget = 32768;
       else thinkingBudget = rawModel.includes("argon") ? 32768 : 16000;
   }
   
