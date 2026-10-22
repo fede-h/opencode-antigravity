@@ -83,7 +83,7 @@ const DEFAULT_CONFIG: ProxyConfig = {
     sanitizeToolNames: true,
     pidOffsetEnabled: false,
     softQuotaThresholdPercent: 90,
-    jitterEnabled: true,
+    jitterEnabled: false,
     jitterMinMs: 50,
     jitterMaxMs: 300
   },
