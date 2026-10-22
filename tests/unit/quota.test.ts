@@ -32,24 +32,27 @@ describe("Quota Formatter Unit Tests", () => {
     expect(p21.length).toBe(50);
   });
 
-  it("formats countdown timers with Refreshes in prefix without leading zero hour", () => {
-    expect(formatResetTimer(undefined, "49h 43m")).toBe("Refreshes in 49h 43m");
-    expect(formatResetTimer(undefined, "0h 36m")).toBe("Refreshes in 36m");
-    expect(formatResetTimer(undefined, "36m")).toBe("Refreshes in 36m");
-    expect(formatResetTimer(undefined, "121h 2m")).toBe("Refreshes in 121h 2m");
+  it("formats countdown timers without leading zero hour", () => {
+    expect(formatResetTimer(undefined, "49h 43m")).toBe("49h 43m");
+    expect(formatResetTimer(undefined, "0h 36m")).toBe("36m");
+    expect(formatResetTimer(undefined, "36m")).toBe("36m");
+    expect(formatResetTimer(undefined, "121h 2m")).toBe("121h 2m");
   });
 
   it("renders friendly offline warning when no accounts or data", () => {
     const card = formatQuotaCard(null);
-    expect(card).toContain("└ Models & Quota");
+    expect(card).toContain("ANTIGRAVITY USAGE & QUOTA");
     expect(card).toContain("proxy service is offline");
+    expect(card.split("\n").length).toBe(5);
   });
 
-  it("renders canonical Antigravity Models & Quota tree layout", () => {
+  it("renders compact hybrid table quota layout with 8 lines and native antigravity styling", () => {
     const mockData: QuotaResponse = {
       accounts: [
         {
           email: "federicohorl1@gmail.com",
+          projectId: "tranquera-495815",
+          healthScore: 100,
           quotaGroups: [
             {
               displayName: "Gemini Models",
@@ -100,33 +103,53 @@ describe("Quota Formatter Unit Tests", () => {
     };
 
     const card = formatQuotaCard(mockData, { ansiColor: false });
-    
+    const lines = card.split("\n");
+
+    // Must be exactly 8 lines so OpenCode never collapses into "(N earlier lines)"
+    expect(lines.length).toBe(8);
+
     // Header & Account
-    expect(card).toContain("└ Models & Quota");
-    expect(card).toContain("  Account: federicohorl1@gmail.com");
+    expect(card).toContain("ANTIGRAVITY USAGE & QUOTA");
+    expect(card).toContain("federicohorl1@gmail.com · tranquera-495815");
+    expect(card).toContain("Health: 100%");
 
-    // Group 1: Gemini Models
-    expect(card).toContain("GEMINI MODELS");
-    expect(card).toContain("  Models within this group: Gemini Flash, Gemini Pro");
-    expect(card).toContain("  Weekly Limit Remaining");
-    expect(card).toContain("    [███████████████████████████████████████████░░░░░░░] 86.15%");
-    expect(card).toContain("    Refreshes in 49h 43m");
-    expect(card).toContain("  Five Hour Limit Remaining");
-    expect(card).toContain("    [█████████████████████████████████████░░░░░░░░░░░░░] 74.77%");
-    expect(card).toContain("    Refreshes in 36m");
+    // All canonical limits
+    expect(card).toContain("Gemini (Flash/Pro) · 5-Hour");
+    expect(card).toContain("74.77%");
+    expect(card).toContain("36m");
 
-    // Group 2: Claude and GPT Models
-    expect(card).toContain("CLAUDE AND GPT MODELS");
-    expect(card).toContain("  Models within this group: Claude Opus, Claude Sonnet, GPT-OSS");
-    expect(card).toContain("    [██████████████████████████████████░░░░░░░░░░░░░░░░] 67.42%");
-    expect(card).toContain("    Refreshes in 148h 41m");
-    expect(card).toContain("    [█████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 34.88%");
-    expect(card).toContain("    Refreshes in 35m");
+    expect(card).toContain("Gemini (Flash/Pro) · Weekly");
+    expect(card).toContain("86.15%");
+    expect(card).toContain("49h 43m");
 
-    // Group 3: Gemini 4 Argon
-    expect(card).toContain("GEMINI 4 ARGON");
-    expect(card).toContain("  Gemini 4 Argon Weekly Limit");
-    expect(card).toContain("    [███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 21.33%");
-    expect(card).toContain("    Refreshes in 121h 2m");
+    expect(card).toContain("Claude & GPT · 5-Hour");
+    expect(card).toContain("34.88%");
+    expect(card).toContain("35m");
+
+    expect(card).toContain("Claude & GPT · Weekly");
+    expect(card).toContain("67.42%");
+    expect(card).toContain("148h 41m");
+
+    expect(card).toContain("Gemini 4 Argon · Weekly");
+    expect(card).toContain("21.33%");
+    expect(card).toContain("121h 2m");
+
+    // Symbol indicators
+    expect(card).toContain("●"); // >= 50%
+    expect(card).toContain("▲"); // 20% - 49%
+
+    // Line widths must be consistent at 74 chars
+    for (const line of lines) {
+      expect(line.length).toBe(74);
+    }
+
+    // ANSI mode
+    const ansiCard = formatQuotaCard(mockData, { ansiColor: true });
+    const ansiLines = ansiCard.split("\n");
+    expect(ansiLines.length).toBe(8);
+    for (const line of ansiLines) {
+      const stripped = line.replace(/\x1b\[[0-9;]*m/g, "");
+      expect(stripped.length).toBe(74);
+    }
   });
 });

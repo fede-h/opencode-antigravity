@@ -119,7 +119,7 @@ export async function fetchQuotaData(): Promise<QuotaResponse | null> {
   return null;
 }
 
-export function makeProgressBar(fraction: number, width = 50): string {
+export function makeProgressBar(fraction: number, width = 14): string {
   const clamped = Math.max(0, Math.min(1, fraction));
   const filled = Math.round(clamped * width);
   const empty = width - filled;
@@ -128,15 +128,15 @@ export function makeProgressBar(fraction: number, width = 50): string {
 
 export function formatResetTimer(resetTime?: string, resetIn?: string): string {
   if (resetIn && resetIn !== "—") {
-    const cleaned = resetIn.replace(/^Refreshes in\s*/i, "").trim();
+    const cleaned = resetIn.replace(/^Refreshes in\s*/i, "").replace(/^Resets in\s*/i, "").trim();
     const match = cleaned.match(/^(?:0h\s*)?(\d+h)?\s*(\d+m)$/);
     if (match) {
       const h = match[1];
       const m = match[2];
-      if (h) return `Refreshes in ${h} ${m}`;
-      return `Refreshes in ${m}`;
+      if (h) return `${h} ${m}`;
+      return m;
     }
-    return `Refreshes in ${cleaned}`;
+    return cleaned;
   }
 
   if (resetTime) {
@@ -147,13 +147,13 @@ export function formatResetTimer(resetTime?: string, resetIn?: string): string {
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
       if (hours > 0) {
-        return `Refreshes in ${hours}h ${minutes}m`;
+        return `${hours}h ${minutes}m`;
       }
-      return `Refreshes in ${minutes}m`;
+      return `${minutes}m`;
     }
   }
 
-  return "Refreshes in —";
+  return "—";
 }
 
 function synthesizeGroupsFromLegacyQuota(quota: QuotaItem[]): QuotaGroupData[] {
@@ -241,101 +241,194 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
     reset: ansiColor ? "\x1b[0m" : "",
     bold: ansiColor ? "\x1b[1m" : "",
     dim: ansiColor ? "\x1b[2m" : "",
+    cyan: ansiColor ? "\x1b[36m" : "",
     green: ansiColor ? "\x1b[32m" : "",
     yellow: ansiColor ? "\x1b[33m" : "",
     red: ansiColor ? "\x1b[31m" : "",
   };
 
+  const targetWidth = 74;
+
   if (!data?.accounts || data.accounts.length === 0) {
-    return [
-      "└ Models & Quota",
-      "",
-      "  No Antigravity accounts configured or proxy service is offline.",
-      "  Start the proxy service:",
-      "    systemctl --user start antigravity-proxy.service"
-    ].join("\n");
+    const top = ansiColor
+      ? `${color.cyan}┌─── ${color.bold}ANTIGRAVITY USAGE & QUOTA${color.reset}${color.cyan} ${"─".repeat(42)}┐${color.reset}`
+      : `┌─── ANTIGRAVITY USAGE & QUOTA ${"─".repeat(42)}┐`;
+    const l1 = ansiColor
+      ? `${color.cyan}│${color.reset}  No Antigravity accounts configured or proxy service is offline.       ${color.cyan}│${color.reset}`
+      : `│  No Antigravity accounts configured or proxy service is offline.       │`;
+    const l2 = ansiColor
+      ? `${color.cyan}│${color.reset}  Start the proxy service:                                              ${color.cyan}│${color.reset}`
+      : `│  Start the proxy service:                                              │`;
+    const l3 = ansiColor
+      ? `${color.cyan}│${color.reset}    systemctl --user start antigravity-proxy.service                    ${color.cyan}│${color.reset}`
+      : `│    systemctl --user start antigravity-proxy.service                    │`;
+    const bot = ansiColor
+      ? `${color.cyan}└────────────────────────────────────────────────────────────────────────┘${color.reset}`
+      : `└────────────────────────────────────────────────────────────────────────┘`;
+    return [top, l1, l2, l3, bot].join("\n");
   }
 
-  const lines: string[] = [];
+  const cards: string[] = [];
 
-  for (let accIdx = 0; accIdx < data.accounts.length; accIdx++) {
-    const acc = data.accounts[accIdx];
+  for (const acc of data.accounts) {
     const email = acc.email || "Unknown Account";
-
-    lines.push("└ Models & Quota");
-    lines.push("");
-    lines.push(`  Account: ${email}`);
-    lines.push("");
+    const health = acc.healthScore ?? 100;
 
     let groups = acc.quotaGroups;
     if (!groups || groups.length === 0) {
       if (acc.quota && acc.quota.length > 0) {
         groups = synthesizeGroupsFromLegacyQuota(acc.quota);
       } else {
-        lines.push("  No quota usage information currently recorded for this account.");
-        continue;
+        groups = [];
       }
     }
 
-    for (let gIdx = 0; gIdx < groups.length; gIdx++) {
-      const group = groups[gIdx];
-      const rawName = group.displayName || group.name || "MODELS";
-      let upperName = rawName.toUpperCase();
-      if (upperName === "CLAUDE AND GPT MODELS") {
-        upperName = "CLAUDE AND GPT MODELS";
-      } else if (upperName === "GEMINI MODELS") {
-        upperName = "GEMINI MODELS";
+    interface ExtractedLimit {
+      name: string;
+      fraction: number;
+      resetStr: string;
+    }
+    const rows: ExtractedLimit[] = [];
+
+    // Find groups
+    const geminiGroup = groups.find(g => {
+      const n = (g.displayName || g.name || "").toLowerCase();
+      return n.includes("gemini") && !n.includes("argon");
+    });
+    const claudeGroup = groups.find(g => {
+      const n = (g.displayName || g.name || "").toLowerCase();
+      return n.includes("claude") || n.includes("gpt");
+    });
+    const argonGroup = groups.find(g => {
+      const n = (g.displayName || g.name || "").toLowerCase();
+      return n.includes("argon");
+    });
+
+    const getBucket = (group?: QuotaGroupData, is5h?: boolean): QuotaBucketData | undefined => {
+      if (!group?.buckets || group.buckets.length === 0) return undefined;
+      if (is5h) {
+        return group.buckets.find(b => {
+          const s = `${b.displayName || ""} ${b.name || ""} ${b.window || ""}`.toLowerCase();
+          return s.includes("5") || s.includes("five") || s.includes("hour");
+        }) || (group.buckets.length > 1 ? group.buckets[1] : undefined);
+      } else {
+        return group.buckets.find(b => {
+          const s = `${b.displayName || ""} ${b.name || ""} ${b.window || ""}`.toLowerCase();
+          return s.includes("week");
+        }) || (group.buckets.length > 0 ? group.buckets[0] : undefined);
       }
+    };
 
-      lines.push(`${color.bold}${upperName}${color.reset}`);
-      if (group.description) {
-        lines.push(`  ${group.description}`);
-      }
-      lines.push("");
+    const g5h = getBucket(geminiGroup, true);
+    const gWeekly = getBucket(geminiGroup, false);
+    const c5h = getBucket(claudeGroup, true);
+    const cWeekly = getBucket(claudeGroup, false);
+    const aWeekly = getBucket(argonGroup, false);
 
-      const buckets = group.buckets || [];
-      for (let bIdx = 0; bIdx < buckets.length; bIdx++) {
-        const bucket = buckets[bIdx];
-        const bName = bucket.displayName || bucket.name || "Limit Remaining";
-        const frac = bucket.remainingFraction !== undefined
-          ? bucket.remainingFraction
-          : (bucket.remaining_fraction !== undefined ? bucket.remaining_fraction : 1.0);
-        
-        const pctNum = frac * 100;
-        const pctStr = `${pctNum.toFixed(2)}%`;
-        const bar = makeProgressBar(frac, 50);
-        const resetStr = formatResetTimer(bucket.resetTime || bucket.reset_time, bucket.resetIn);
-
-        let barColor = color.green;
-        if (frac < 0.2) barColor = color.red;
-        else if (frac < 0.5) barColor = color.yellow;
-
-        lines.push(`  ${bName}`);
-        if (ansiColor) {
-          lines.push(`    [${barColor}${bar}${color.reset}] ${color.bold}${pctStr}${color.reset}`);
-          lines.push(`    ${color.dim}${resetStr}${color.reset}`);
-        } else {
-          lines.push(`    [${bar}] ${pctStr}`);
-          lines.push(`    ${resetStr}`);
-        }
-
-        if (bIdx < buckets.length - 1) {
-          lines.push("");
-        }
-      }
-
-      if (gIdx < groups.length - 1) {
-        lines.push("");
-        lines.push("");
-      }
+    if (g5h) {
+      rows.push({
+        name: "Gemini (Flash/Pro) · 5-Hour",
+        fraction: g5h.remainingFraction ?? g5h.remaining_fraction ?? 1.0,
+        resetStr: formatResetTimer(g5h.resetTime || g5h.reset_time, g5h.resetIn)
+      });
+    }
+    if (gWeekly) {
+      rows.push({
+        name: "Gemini (Flash/Pro) · Weekly",
+        fraction: gWeekly.remainingFraction ?? gWeekly.remaining_fraction ?? 1.0,
+        resetStr: formatResetTimer(gWeekly.resetTime || gWeekly.reset_time, gWeekly.resetIn)
+      });
+    }
+    if (c5h) {
+      rows.push({
+        name: "Claude & GPT · 5-Hour",
+        fraction: c5h.remainingFraction ?? c5h.remaining_fraction ?? 1.0,
+        resetStr: formatResetTimer(c5h.resetTime || c5h.reset_time, c5h.resetIn)
+      });
+    }
+    if (cWeekly) {
+      rows.push({
+        name: "Claude & GPT · Weekly",
+        fraction: cWeekly.remainingFraction ?? cWeekly.remaining_fraction ?? 1.0,
+        resetStr: formatResetTimer(cWeekly.resetTime || cWeekly.reset_time, cWeekly.resetIn)
+      });
+    }
+    if (aWeekly) {
+      rows.push({
+        name: "Gemini 4 Argon · Weekly",
+        fraction: aWeekly.remainingFraction ?? aWeekly.remaining_fraction ?? 1.0,
+        resetStr: formatResetTimer(aWeekly.resetTime || aWeekly.reset_time, aWeekly.resetIn)
+      });
     }
 
-    if (accIdx < data.accounts.length - 1) {
-      lines.push("");
-      lines.push("--------------------------------------------------------------------------------");
-      lines.push("");
+    const top = ansiColor
+      ? `${color.cyan}┌─── ${color.bold}ANTIGRAVITY USAGE & QUOTA${color.reset}${color.cyan} ${"─".repeat(42)}┐${color.reset}`
+      : `┌─── ANTIGRAVITY USAGE & QUOTA ${"─".repeat(42)}┐`;
+
+    const hdr = ansiColor
+      ? `${color.cyan}│${color.reset} ${color.dim}MODEL GROUP / LIMIT              REMAINING    METER              RESET${color.reset} ${color.cyan}│${color.reset}`
+      : `│ MODEL GROUP / LIMIT              REMAINING    METER              RESET │`;
+
+    const renderRow = (r: ExtractedLimit): string => {
+      const frac = Math.max(0, Math.min(1, r.fraction));
+      let symbol = "●";
+      let statusColor = color.green;
+      if (frac < 0.2) {
+        symbol = "✖";
+        statusColor = color.red;
+      } else if (frac < 0.5) {
+        symbol = "▲";
+        statusColor = color.yellow;
+      }
+
+      const pctNum = frac * 100;
+      const pctStr = `${pctNum.toFixed(2)}%`.padStart(8);
+      const barFilled = Math.round(frac * 14);
+      const barEmpty = 14 - barFilled;
+      const nameCol = r.name.padEnd(30);
+      const resetCol = r.resetStr.padStart(9);
+
+      if (ansiColor) {
+        const sym = `${statusColor}${symbol}${color.reset}`;
+        const pct = `${color.bold}${pctStr}${color.reset}`;
+        const filledStr = `${statusColor}${"█".repeat(barFilled)}${color.reset}`;
+        const emptyStr = `${color.dim}${"░".repeat(barEmpty)}${color.reset}`;
+        const meterCol = `${color.dim}[${color.reset}${filledStr}${emptyStr}${color.dim}]${color.reset}`;
+        const rst = `${color.dim}${resetCol}${color.reset}`;
+        return `${color.cyan}│${color.reset} ${sym} ${nameCol}${pct}   ${meterCol}  ${rst} ${color.cyan}│${color.reset}`;
+      } else {
+        const meterCol = `[${"█".repeat(barFilled)}${"░".repeat(barEmpty)}]`;
+        return `│ ${symbol} ${nameCol}${pctStr}   ${meterCol}  ${resetCol} │`;
+      }
+    };
+
+    let emailPart = email;
+    const plainRight = health !== undefined ? ` Health: ${health}% ───┘` : ` ───┘`;
+    const maxEmailPartLen = targetWidth - plainRight.length - 8;
+    if (acc.projectId && (email.length + acc.projectId.length + 3 <= maxEmailPartLen)) {
+      emailPart = `${email} · ${acc.projectId}`;
+    }
+    const plainLeft = `└─── ${emailPart} `;
+    const dashesNeeded = Math.max(3, targetWidth - plainLeft.length - plainRight.length);
+
+    let healthColor = color.green;
+    if (health < 50) healthColor = color.red;
+    else if (health < 80) healthColor = color.yellow;
+
+    const bot = ansiColor
+      ? `${color.cyan}└─── ${color.reset}${color.dim}${emailPart}${color.reset} ${color.cyan}${"─".repeat(dashesNeeded)}${color.reset} ${color.dim}Health:${color.reset} ${healthColor}${health}%${color.reset}${color.cyan} ───┘${color.reset}`
+      : `${plainLeft}${"─".repeat(dashesNeeded)}${plainRight}`;
+
+    if (rows.length === 0) {
+      const emptyRow = ansiColor
+        ? `${color.cyan}│${color.reset}  No quota usage information currently recorded for this account.       ${color.cyan}│${color.reset}`
+        : `│  No quota usage information currently recorded for this account.       │`;
+      cards.push([top, emptyRow, bot].join("\n"));
+    } else {
+      const renderedRows = rows.map(r => renderRow(r));
+      cards.push([top, hdr, ...renderedRows, bot].join("\n"));
     }
   }
 
-  return lines.join("\n");
+  return cards.join("\n");
 }
