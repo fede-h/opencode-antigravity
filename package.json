@@ -5,11 +5,13 @@
   "module": "src/server.ts",
   "bin": {
     "open-gemini": "./src/server.ts",
-    "open-gemini-setup": "./src/scripts/setup-opencode.ts"
+    "open-gemini-setup": "./src/scripts/setup-opencode.ts",
+    "open-gemini-quota": "./src/scripts/show-quota.ts"
   },
   "type": "module",
   "scripts": {
     "setup": "bun run src/scripts/setup-opencode.ts",
+    "quota": "bun run src/scripts/show-quota.ts",
     "start": "bun run src/server.ts",
     "dev": "bun run --watch src/server.ts",
     "lint:check": "bun x tsc --noEmit --skipLibCheck",

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { homedir, platform } from "node:os";
 import { join, dirname } from "node:path";
-import { mkdirSync, existsSync, chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, existsSync, chmodSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from "node:fs";
 import { Database } from "bun:sqlite";
 import { refreshAccessToken, getUserEmail, getProjectId, generateAuthUrl } from "../auth/oauth";
 import { generateFingerprint } from "../utils/headers";
@@ -409,6 +409,40 @@ WantedBy=default.target
   }
 }
 
+function installOpenCodeCommandsAndSkills(projectRoot: string) {
+  const commandsSrc = join(projectRoot, "commands");
+  const skillsSrc = join(projectRoot, "skills");
+
+  const opencodeCommandsDir = join(HOME, ".config", "opencode", "commands");
+  const opencodeSkillsDir = join(HOME, ".config", "opencode", "skills");
+
+  if (existsSync(commandsSrc)) {
+    ensureDir(join(opencodeCommandsDir, "placeholder"));
+    const commandFiles = readdirSync(commandsSrc);
+    for (const file of commandFiles) {
+      if (!file.endsWith(".md")) continue;
+      const srcFile = join(commandsSrc, file);
+      const destFile = join(opencodeCommandsDir, file);
+      copyFileSync(srcFile, destFile);
+      console.log(`✓ Installed OpenCode slash command: /${file.replace(/\.md$/, "")}`);
+    }
+  }
+
+  if (existsSync(skillsSrc)) {
+    ensureDir(join(opencodeSkillsDir, "placeholder"));
+    const skillDirs = readdirSync(skillsSrc);
+    for (const skill of skillDirs) {
+      const srcSkillDir = join(skillsSrc, skill);
+      const destSkillDir = join(opencodeSkillsDir, skill);
+      if (existsSync(join(srcSkillDir, "SKILL.md"))) {
+        ensureDir(join(destSkillDir, "placeholder"));
+        copyFileSync(join(srcSkillDir, "SKILL.md"), join(destSkillDir, "SKILL.md"));
+        console.log(`✓ Installed OpenCode skill: ${skill}`);
+      }
+    }
+  }
+}
+
 async function main() {
   console.log("=== Open-Gemini: Antigravity -> OpenCode Setup ===\n");
 
@@ -422,6 +456,7 @@ async function main() {
   registerOpenCodeCredential();
   configureCliModelSelector();
   configureDesktopModelSelector();
+  installOpenCodeCommandsAndSkills(projectRoot);
   installBackgroundService(activeProxyDir);
 
   console.log("\n✅ Setup complete!");

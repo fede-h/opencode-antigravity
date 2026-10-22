@@ -42,6 +42,33 @@ Bun.serve({
       return Response.redirect(generateAuthUrl());
     }
 
+    if (cleanPath === "/v1/quota" || cleanPath === "/api/quota") {
+        if (Date.now() - lastQuotaRefresh > 5 * 60 * 1000) {
+            await refreshAllQuotas();
+            lastQuotaRefresh = Date.now();
+        }
+
+        const accounts = getAccounts().map(a => ({
+            email: a.email,
+            projectId: a.projectId,
+            healthScore: a.healthScore ?? 100,
+            quota: a.quota || [],
+            lastUsed: a.lastUsed ? new Date(a.lastUsed).toISOString() : null
+        }));
+
+        return new Response(JSON.stringify({
+            service: "open-gemini",
+            accounts
+        }, null, 2), {
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        });
+    }
+
     if (cleanPath === "/v1/models") {
         // Refresh quotas if empty, defaults only, or stale (>10 min)
         if (supportedModelsCache.size <= 9 || Date.now() - lastQuotaRefresh > 10 * 60 * 1000) {
