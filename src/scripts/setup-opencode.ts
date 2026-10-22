@@ -413,9 +413,7 @@ async function main() {
   console.log("=== Open-Gemini: Antigravity -> OpenCode Setup ===\n");
 
   const projectRoot = join(import.meta.dir, "..", "..");
-  const activeProxyDir = existsSync(join(HOME, ".config", "antigravity-proxy", "src", "server.ts"))
-    ? join(HOME, ".config", "antigravity-proxy")
-    : projectRoot;
+  const activeProxyDir = projectRoot;
 
   const accountsFile = join(activeProxyDir, "antigravity-accounts.json");
 
