@@ -73,9 +73,22 @@ bun run setup
 
 ---
 
-## Verification
+## Verification & Built-in OpenCode Skills
 
 ```bash
+# Check quota directly in OpenCode
+/agy-usage
+
+# Run automated diagnostics and self-repair in OpenCode
+/agy-troubleshoot
+
+# Run CLI diagnostic & self-repair directly
+bun run troubleshoot
+bun run troubleshoot --fix
+
+# View quota directly in terminal
+bun run quota
+
 # Test Gemini 3.8 Flash
 opencode run -m antigravity/antigravity-gemini-3.8-flash "Say hello"
 
