@@ -65,15 +65,15 @@ bun run setup
 
 | OpenCode Model ID | Display Name | Upstream Target | Context / Output |
 | :--- | :--- | :--- | :--- |
-| `antigravity/antigravity-gemini-3.8-flash` | `Gemini 3.8 Flash [Antigravity]` | `gemini-3.8-flash-tiered` | 1,048,576 / 65,536 |
-| `antigravity/antigravity-gemini-4-argon` | `Gemini 4 Argon [Antigravity]` | `gemini-3.8-flash-tiered` (High Thinking, 32k budget) | 1,048,576 / 65,536 |
-| `antigravity/antigravity-gemini-3.1-pro-high` | `Gemini 3.1 Pro (High Thinking) [Antigravity]` | `gemini-3.1-pro-high` | 1,048,576 / 65,535 |
-| `antigravity/antigravity-gemini-3.1-pro-low` | `Gemini 3.1 Pro (Low Thinking) [Antigravity]` | `gemini-3.1-pro-low` | 1,048,576 / 65,535 |
-| `antigravity/antigravity-gemini-3-flash` | `Gemini 3 Flash [Antigravity]` | `gemini-3-flash` | 1,048,576 / 65,536 |
-| `antigravity/antigravity-claude-opus-4-6-thinking-high` | `Claude Opus 4.6 Thinking (High) [Antigravity]` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
-| `antigravity/antigravity-claude-opus-4-6-thinking-low` | `Claude Opus 4.6 Thinking (Low) [Antigravity]` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
-| `antigravity/antigravity-claude-sonnet-4-6-thinking-high` | `Claude Sonnet 4.6 Thinking (High) [Antigravity]` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
-| `antigravity/antigravity-claude-sonnet-4-6-thinking-low` | `Claude Sonnet 4.6 Thinking (Low) [Antigravity]` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
+| `antigravity/antigravity-gemini-3.8-flash` | `Gemini 3.8 Flash` | `gemini-3.8-flash-tiered` | 1,048,576 / 65,536 |
+| `antigravity/antigravity-gemini-4-argon` | `Gemini 4 Argon` | `gemini-3.8-flash-tiered` (High Thinking, 32k budget) | 1,048,576 / 65,536 |
+| `antigravity/antigravity-gemini-3.1-pro-high` | `Gemini 3.1 Pro (High Thinking)` | `gemini-3.1-pro-high` | 1,048,576 / 65,535 |
+| `antigravity/antigravity-gemini-3.1-pro-low` | `Gemini 3.1 Pro (Low Thinking)` | `gemini-3.1-pro-low` | 1,048,576 / 65,535 |
+| `antigravity/antigravity-gemini-3-flash` | `Gemini 3 Flash` | `gemini-3-flash` | 1,048,576 / 65,536 |
+| `antigravity/antigravity-claude-opus-4-6-thinking-high` | `Claude Opus 4.6 Thinking (High)` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
+| `antigravity/antigravity-claude-opus-4-6-thinking-low` | `Claude Opus 4.6 Thinking (Low)` | `claude-opus-4-6-thinking` | 1,000,000 / 64,000 |
+| `antigravity/antigravity-claude-sonnet-4-6-thinking-high` | `Claude Sonnet 4.6 Thinking (High)` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
+| `antigravity/antigravity-claude-sonnet-4-6-thinking-low` | `Claude Sonnet 4.6 Thinking (Low)` | `claude-sonnet-4-6-thinking` | 200,000 / 64,000 |
 
 ---
 

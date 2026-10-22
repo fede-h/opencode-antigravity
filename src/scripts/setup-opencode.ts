@@ -13,47 +13,47 @@ const PROXY_URL = process.env.PROXY_URL || "http://127.0.0.1:3000/v1";
 
 const ANTIGRAVITY_MODELS: Record<string, { name: string; limit: { context: number; output: number }; defaultVariant?: string }> = {
   "antigravity-gemini-4-argon": {
-    name: "Gemini 4 Argon [Antigravity]",
+    name: "Gemini 4 Argon",
     limit: { context: 1048576, output: 65536 },
     defaultVariant: "default"
   },
   "antigravity-gemini-3.8-flash": {
-    name: "Gemini 3.8 Flash [Antigravity]",
+    name: "Gemini 3.8 Flash",
     limit: { context: 1048576, output: 65536 },
     defaultVariant: "high"
   },
   "antigravity-claude-opus-5-5-thinking-high": {
-    name: "Claude Opus 5.5 (Thinking High) [Antigravity]",
+    name: "Claude Opus 5.5 (Thinking High)",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "high"
   },
   "antigravity-claude-opus-5-5-thinking-low": {
-    name: "Claude Opus 5.5 (Thinking Low) [Antigravity]",
+    name: "Claude Opus 5.5 (Thinking Low)",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "default"
   },
   "antigravity-claude-opus-5-5": {
-    name: "Claude Opus 5.5 [Antigravity]",
+    name: "Claude Opus 5.5",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "default"
   },
   "antigravity-claude-sonnet-5-5-thinking-high": {
-    name: "Claude Sonnet 5.5 (Thinking High) [Antigravity]",
+    name: "Claude Sonnet 5.5 (Thinking High)",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "high"
   },
   "antigravity-claude-sonnet-5-5-thinking-low": {
-    name: "Claude Sonnet 5.5 (Thinking Low) [Antigravity]",
+    name: "Claude Sonnet 5.5 (Thinking Low)",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "default"
   },
   "antigravity-claude-sonnet-5-5": {
-    name: "Claude Sonnet 5.5 [Antigravity]",
+    name: "Claude Sonnet 5.5",
     limit: { context: 1000000, output: 64000 },
     defaultVariant: "default"
   },
   "antigravity-gpt-oss-120b-medium": {
-    name: "GPT-OSS 120B (Medium) [Antigravity]",
+    name: "GPT-OSS 120B (Medium)",
     limit: { context: 131072, output: 16384 },
     defaultVariant: "default"
   }
@@ -191,7 +191,7 @@ function configureOpenCodeJson() {
   }
 
   config.provider.antigravity = {
-    name: "Antigravity Models (Local Proxy)",
+    name: "Antigravity",
     npm: "@ai-sdk/openai-compatible",
     options: {
       baseURL: PROXY_URL
