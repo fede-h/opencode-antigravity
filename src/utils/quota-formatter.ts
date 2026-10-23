@@ -284,7 +284,8 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
     }
 
     interface ExtractedLimit {
-      name: string;
+      group: string;
+      limit: string;
       fraction: number;
       resetStr: string;
     }
@@ -327,35 +328,40 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
 
     if (g5h) {
       rows.push({
-        name: "Gemini (Flash/Pro) · 5-Hour",
+        group: "Gemini (Flash/Pro)",
+        limit: "5-Hour",
         fraction: g5h.remainingFraction ?? g5h.remaining_fraction ?? 1.0,
         resetStr: formatResetTimer(g5h.resetTime || g5h.reset_time, g5h.resetIn)
       });
     }
     if (gWeekly) {
       rows.push({
-        name: "Gemini (Flash/Pro) · Weekly",
+        group: "Gemini (Flash/Pro)",
+        limit: "Weekly",
         fraction: gWeekly.remainingFraction ?? gWeekly.remaining_fraction ?? 1.0,
         resetStr: formatResetTimer(gWeekly.resetTime || gWeekly.reset_time, gWeekly.resetIn)
       });
     }
     if (c5h) {
       rows.push({
-        name: "Claude & GPT · 5-Hour",
+        group: "Claude & GPT",
+        limit: "5-Hour",
         fraction: c5h.remainingFraction ?? c5h.remaining_fraction ?? 1.0,
         resetStr: formatResetTimer(c5h.resetTime || c5h.reset_time, c5h.resetIn)
       });
     }
     if (cWeekly) {
       rows.push({
-        name: "Claude & GPT · Weekly",
+        group: "Claude & GPT",
+        limit: "Weekly",
         fraction: cWeekly.remainingFraction ?? cWeekly.remaining_fraction ?? 1.0,
         resetStr: formatResetTimer(cWeekly.resetTime || cWeekly.reset_time, cWeekly.resetIn)
       });
     }
     if (aWeekly) {
       rows.push({
-        name: "Gemini 4 Argon · Weekly",
+        group: "Gemini 4 Argon",
+        limit: "Weekly",
         fraction: aWeekly.remainingFraction ?? aWeekly.remaining_fraction ?? 1.0,
         resetStr: formatResetTimer(aWeekly.resetTime || aWeekly.reset_time, aWeekly.resetIn)
       });
@@ -365,9 +371,16 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
       ? `${color.cyan}┌─── ${color.bold}ANTIGRAVITY USAGE & QUOTA${color.reset}${color.cyan} ${"─".repeat(42)}┐${color.reset}`
       : `┌─── ANTIGRAVITY USAGE & QUOTA ${"─".repeat(42)}┐`;
 
+    // ponytail: fixed 74-char card, columns hand-padded instead of a table lib
+    const groupCol = 21;
+    const limitCol = 6;
+    const pctCol = 9;
+    const meterCol = 16;
+    const resetCol = 9;
+
     const hdr = ansiColor
-      ? `${color.cyan}│${color.reset} ${color.dim}MODEL GROUP / LIMIT              REMAINING    METER              RESET${color.reset} ${color.cyan}│${color.reset}`
-      : `│ MODEL GROUP / LIMIT              REMAINING    METER              RESET │`;
+      ? `${color.cyan}│   ${color.dim}${"MODEL GROUP".padEnd(groupCol)} ${"LIMIT".padStart(limitCol)}  ${"REMAINING".padStart(pctCol)}  ${" ".repeat(meterCol)}  ${"RESET".padStart(resetCol)}${color.reset} ${color.cyan}│${color.reset}`
+      : `│   ${"MODEL GROUP".padEnd(groupCol)} ${"LIMIT".padStart(limitCol)}  ${"REMAINING".padStart(pctCol)}  ${" ".repeat(meterCol)}  ${"RESET".padStart(resetCol)} │`;
 
     const renderRow = (r: ExtractedLimit): string => {
       const frac = Math.max(0, Math.min(1, r.fraction));
@@ -381,34 +394,30 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
         statusColor = color.yellow;
       }
 
-      const pctNum = frac * 100;
-      const pctStr = `${pctNum.toFixed(2)}%`.padStart(8);
+      const pctStr = `${(frac * 100).toFixed(2)}%`.padStart(pctCol);
       const barFilled = Math.round(frac * 14);
       const barEmpty = 14 - barFilled;
-      const nameCol = r.name.padEnd(30);
-      const resetCol = r.resetStr.padStart(9);
+      const gCol = r.group.padEnd(groupCol);
+      const lCol = r.limit.padStart(limitCol);
+      const rstCol = r.resetStr.padStart(resetCol);
 
       if (ansiColor) {
         const sym = `${statusColor}${symbol}${color.reset}`;
         const pct = `${color.bold}${pctStr}${color.reset}`;
         const filledStr = `${statusColor}${"█".repeat(barFilled)}${color.reset}`;
         const emptyStr = `${color.dim}${"░".repeat(barEmpty)}${color.reset}`;
-        const meterCol = `${color.dim}[${color.reset}${filledStr}${emptyStr}${color.dim}]${color.reset}`;
-        const rst = `${color.dim}${resetCol}${color.reset}`;
-        return `${color.cyan}│${color.reset} ${sym} ${nameCol}${pct}   ${meterCol}  ${rst} ${color.cyan}│${color.reset}`;
+        const bar = `${color.dim}[${color.reset}${filledStr}${emptyStr}${color.dim}]${color.reset}`;
+        const rst = `${color.dim}${rstCol}${color.reset}`;
+        return `${color.cyan}│${color.reset} ${sym} ${gCol} ${lCol}  ${pct}  ${bar}  ${rst} ${color.cyan}│${color.reset}`;
       } else {
-        const meterCol = `[${"█".repeat(barFilled)}${"░".repeat(barEmpty)}]`;
-        return `│ ${symbol} ${nameCol}${pctStr}   ${meterCol}  ${resetCol} │`;
+        const bar = `[${"█".repeat(barFilled)}${"░".repeat(barEmpty)}]`;
+        return `│ ${symbol} ${gCol} ${lCol}  ${pctStr}  ${bar}  ${rstCol} │`;
       }
     };
 
-    let emailPart = email;
+    // ponytail: project id dropped from the footer, email is enough context
     const plainRight = health !== undefined ? ` Health: ${health}% ───┘` : ` ───┘`;
-    const maxEmailPartLen = targetWidth - plainRight.length - 8;
-    if (acc.projectId && (email.length + acc.projectId.length + 3 <= maxEmailPartLen)) {
-      emailPart = `${email} · ${acc.projectId}`;
-    }
-    const plainLeft = `└─── ${emailPart} `;
+    const plainLeft = `└─── ${email} `;
     const dashesNeeded = Math.max(3, targetWidth - plainLeft.length - plainRight.length);
 
     let healthColor = color.green;
@@ -416,7 +425,7 @@ export function formatQuotaCard(data: QuotaResponse | null, options: { ansiColor
     else if (health < 80) healthColor = color.yellow;
 
     const bot = ansiColor
-      ? `${color.cyan}└─── ${color.reset}${color.dim}${emailPart}${color.reset} ${color.cyan}${"─".repeat(dashesNeeded)}${color.reset} ${color.dim}Health:${color.reset} ${healthColor}${health}%${color.reset}${color.cyan} ───┘${color.reset}`
+      ? `${color.cyan}└─── ${color.reset}${color.dim}${email}${color.reset} ${color.cyan}${"─".repeat(dashesNeeded)}${color.reset} ${color.dim}Health:${color.reset} ${healthColor}${health}%${color.reset}${color.cyan} ───┘${color.reset}`
       : `${plainLeft}${"─".repeat(dashesNeeded)}${plainRight}`;
 
     if (rows.length === 0) {

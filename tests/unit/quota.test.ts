@@ -110,27 +110,35 @@ describe("Quota Formatter Unit Tests", () => {
 
     // Header & Account
     expect(card).toContain("ANTIGRAVITY USAGE & QUOTA");
-    expect(card).toContain("federicohorl1@gmail.com · tranquera-495815");
+    expect(card).toContain("federicohorl1@gmail.com");
+    expect(card).not.toContain("tranquera-495815");
+    expect(card).not.toContain("METER");
+    expect(card).toContain("MODEL GROUP");
+    expect(card).toContain("LIMIT");
     expect(card).toContain("Health: 100%");
 
+    // Column layout: group and limit side by side on one row
+    const row = (group: string, limit: string) =>
+      lines.find(l => l.includes(group) && l.includes(limit));
+    expect(row("Gemini (Flash/Pro)", "5-Hour")).toBeDefined();
+    expect(row("Gemini (Flash/Pro)", "Weekly")).toBeDefined();
+    expect(row("Claude & GPT", "5-Hour")).toBeDefined();
+    expect(row("Claude & GPT", "Weekly")).toBeDefined();
+    expect(row("Gemini 4 Argon", "Weekly")).toBeDefined();
+
     // All canonical limits
-    expect(card).toContain("Gemini (Flash/Pro) · 5-Hour");
     expect(card).toContain("74.77%");
     expect(card).toContain("36m");
 
-    expect(card).toContain("Gemini (Flash/Pro) · Weekly");
     expect(card).toContain("86.15%");
     expect(card).toContain("49h 43m");
 
-    expect(card).toContain("Claude & GPT · 5-Hour");
     expect(card).toContain("34.88%");
     expect(card).toContain("35m");
 
-    expect(card).toContain("Claude & GPT · Weekly");
     expect(card).toContain("67.42%");
     expect(card).toContain("148h 41m");
 
-    expect(card).toContain("Gemini 4 Argon · Weekly");
     expect(card).toContain("21.33%");
     expect(card).toContain("121h 2m");
 
