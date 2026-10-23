@@ -132,6 +132,51 @@ async function checkAccounts(): Promise<void> {
   } else {
     results.push({ name: "Capability Health", status: "OK", message: `${accounts.length} account(s) clean without poisoned flags` });
   }
+
+  let hasDegradedHealth = false;
+  for (const acc of accounts) {
+    if (acc.healthScore !== undefined && acc.healthScore < 50) {
+      hasDegradedHealth = true;
+      break;
+    }
+  }
+
+  if (hasDegradedHealth) {
+    results.push({
+      name: "Account Health",
+      status: "FAIL",
+      message: "One or more accounts have degraded health score (< 50%) due to failed auth or refresh",
+      fixAvailable: true
+    });
+    if (autoFix) {
+      try {
+        const { refreshAccessToken } = await import("../auth/oauth");
+        for (const acc of accounts) {
+          if (acc.refreshToken) {
+            try {
+              const tokens = await refreshAccessToken(acc.refreshToken);
+              acc.accessToken = tokens.access_token;
+              acc.expiresAt = Date.now() + (tokens.expires_in * 1000);
+              acc.healthScore = 100;
+              delete acc.consecutiveFailures;
+              delete acc.challenge;
+            } catch {}
+          }
+        }
+        writeFileSync(accountsFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+        const configAccountsFile = join(HOME, ".config", "antigravity-proxy", "antigravity-accounts.json");
+        if (existsSync(configAccountsFile)) {
+          writeFileSync(configAccountsFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+        }
+        Bun.spawnSync(["systemctl", "--user", "restart", "antigravity-proxy.service"]);
+        console.log("  [FIXED] Refreshed tokens, restored health scores to 100%, and restarted proxy.");
+      } catch (err: any) {
+        console.error("  [ERROR] Failed to auto-refresh accounts:", err.message);
+      }
+    }
+  } else {
+    results.push({ name: "Account Health", status: "OK", message: `${accounts.length} account(s) at healthy score (>= 50%)` });
+  }
 }
 
 async function checkOpenCodeConfig(): Promise<void> {

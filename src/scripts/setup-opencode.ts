@@ -476,6 +476,15 @@ function installOpenCodeCommandsAndSkills(projectRoot: string) {
       }
       Bun.spawnSync(["ln", "-sf", showQuotaScript, targetSymlink]);
       console.log(`✓ Linked executable to ${targetSymlink}`);
+
+      const troubleshootScript = join(projectRoot, "src", "scripts", "troubleshoot.ts");
+      chmodSync(troubleshootScript, 0o755);
+      const targetTroubleshoot = join(localBin, "agy-troubleshoot");
+      if (existsSync(targetTroubleshoot)) {
+        Bun.spawnSync(["rm", "-f", targetTroubleshoot]);
+      }
+      Bun.spawnSync(["ln", "-sf", troubleshootScript, targetTroubleshoot]);
+      console.log(`✓ Linked executable to ${targetTroubleshoot}`);
     } catch {}
   }
 }
